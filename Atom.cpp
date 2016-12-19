@@ -508,19 +508,19 @@ void error_message_upper_lower_confused(int nu, int nl)
 double Electron_Level::A21(double f_ul, int nu, int lu, int nl, int ll)                 // in 1/sec
 { 
     if(nu<nl) error_message_upper_lower_confused(nu, nl);
-    return -2.0*FOURPI*const_PIe2_mec*this->alpha_scale/this->me_scale*f_ul/pow(lambda_ul(nu, nl), 2);
+    return -2.0*FOURPI*const_PIe2_mec*this->FSC_scale/this->ME_scale*f_ul/pow(lambda_ul(nu, nl), 2);
 }
 
 double Electron_Level::B12(double f_lu, int nl, int nu)
 {
     if(nl>nu) error_message_upper_lower_confused(nu, nl);
-    return FOURPI/(nu_ul(nu, nl)*const_h)*const_PIe2_mec*this->alpha_scale/this->me_scale*f_lu;
+    return FOURPI/(nu_ul(nu, nl)*const_h)*const_PIe2_mec*this->FSC_scale/this->ME_scale*f_lu;
 }  
 
 double Electron_Level::B21(double f_ul, int nu, int nl)
 { 
     if(nu<nl) error_message_upper_lower_confused(nu, nl);
-    return FOURPI/(nu_ul(nl, nu)*const_h)*const_PIe2_mec*this->alpha_scale/this->me_scale*f_ul;
+    return FOURPI/(nu_ul(nl, nu)*const_h)*const_PIe2_mec*this->FSC_scale/this->ME_scale*f_ul;
 }
 
 //====================================================================================================================
@@ -1346,8 +1346,8 @@ double Gas_of_Atoms::R_phot_tot_BB(int nlow)         // total photoionization ra
 double Gas_of_Atoms::Ni_NeNc_LTE(unsigned int i, double TM)
 { 
     double gi=2.0*(2.0*Get_l_of_Level(i)+1.0), gc=1.0;
-    return gi/2.0/gc*pow(const_lambdac/this->me_scale, 3)
-                    *pow(2.0*PI*const_kb_mec2*this->me_scale*TM*Level(i).Get_mu_red(), -1.5)
+    return gi/2.0/gc*pow(const_lambdac/Level(i).get_ME_scale(), 3)
+                    *pow(2.0*PI*const_kb_mec2/Level(i).get_ME_scale()*TM*Level(i).Get_mu_red(), -1.5)
                     *exp(Level(i).Get_E_ion_ergs()/const_kB/TM );
 }
 
