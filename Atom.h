@@ -132,8 +132,8 @@ class Electron_Level
                   int Rec_flag=0, int mflag=1);        
             
         //============================================================================================================
-        double DE_ul(int nu, int nl){return Z*Z*const_EH_inf*mu_red*energy_scale*(1.0/nl/nl-1.0/nu/nu); }   // in eV
-        double nu_ul(int nu, int nl){return Z*Z*const_EH_inf_Hz*mu_red*energy_scale*(1.0/nl/nl-1.0/nu/nu);} // in Hz
+        double DE_ul(int nu, int nl){return Z*Z*const_EH_inf*energy_scale*mu_red*(1.0/nl/nl-1.0/nu/nu); }   // in eV
+        double nu_ul(int nu, int nl){return Z*Z*const_EH_inf_Hz*energy_scale*mu_red*(1.0/nl/nl-1.0/nu/nu);} // in Hz
         double E_ion(int n){return Z*Z*const_EH_inf*energy_scale*mu_red/n/n; }                              // in eV
         double E_ion_ergs(int n){return Z*Z*const_EH_inf_ergs*energy_scale*mu_red/n/n; }                    // in ergs
         double nu_ion(int n){ return Z*Z*const_EH_inf_Hz*energy_scale*mu_red/n/n; }                         // in Hz
@@ -188,9 +188,10 @@ class Electron_Level
         double Get_nu21(const int &np, const int &lp) const;
         double Get_lambda21(const int &np, const int &lp) const;
         double Get_f21(const int &np, const int &lp) const
-        { return Get_A21(np, lp)*pow(Get_lambda21(np, lp), 2)/(2.0*FOURPI*const_PIe2_mec); }
+        { return Get_A21(np, lp)*pow(Get_lambda21(np, lp), 2)/(2.0*FOURPI*const_PIe2_mec*FSC_scale/ME_scale); }
         double Get_f12(const int &np, const int &lp) const
-        { return Get_A21(np, lp)*pow(Get_lambda21(np, lp), 2)/(2.0*FOURPI*const_PIe2_mec)*(2.0*ll+1.0)/(2.0*lp+1.0); }
+        { return Get_A21(np, lp)*pow(Get_lambda21(np, lp), 2)/(2.0*FOURPI*const_PIe2_mec*FSC_scale/ME_scale)
+                                *(2.0*ll+1.0)/(2.0*lp+1.0); }
         
         int Get_n_up() const { return B_values.size(); }
         int Get_B_data_np(const unsigned int &i){ return B_values[i].np; }
