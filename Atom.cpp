@@ -1,9 +1,10 @@
 //====================================================================================================================
-// Author: Jens Chluba
+// Author: Jens Chluba and Luke Hart
 //
 // first implementation: June 2005
 // last change         : Aug  2014
 //====================================================================================================================
+// Oct-Dec 2016: added scaling of hydrogenic atom with alpha and me, LH
 // 01.08.2014: fixed bug for transition data when quadrupole lines are activated
 // July  2014: tidied up the code; checked verbosity and recombination rates communication;
 // May   2011: Support for electric quadrupole lines were added.
@@ -39,6 +40,14 @@ void Electron_Level::init(int n, int l, int nm, int ZZ, double NNp, bool Qlines_
     
     Recombination_flag=Rec_flag;
     mess_flag=mflag;
+    
+    // Fundamental scaling variables [LH, Oct-Dec, 2016]
+    FSC_scale = 1.;
+    ME_scale = 1.;
+    energy_scale = 1.;
+    sig_scale = 1.;
+    rate_scale_A = 1.;
+    rate_scale_B = 1.;
     
     DE=DE_ul(nn, 1);
     Dnu=nu_ul(nn, 1);
@@ -398,37 +407,41 @@ double Electron_Level::Get_nu_ionization()
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.Get_nu_ionization();
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.Get_nu_ionization();
     
-    return r;
+    return r*this->energy_scale;
 }        
 
 //====================================================================================================================
 double Electron_Level::R_nl_c(double T_g)
 {
     double r=0.0;
+    T_g/=this->energy_scale;
     if(Recombination_flag==0)  error_message_no_Rec_rate("R_nl_c");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.R_nl_c_Int(T_g);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.R_nl_c_Int(T_g);
-    return r;
+
+    return r*this->rate_scale_B;
 }
 
 double Electron_Level::R_c_nl(double T_g, double rho)
 {
     double r=0.0;
+    T_g/=this->energy_scale;
     if(Recombination_flag==0) error_message_no_Rec_rate("R_c_nl");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.R_c_nl_Int(T_g, rho);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.R_c_nl_Int(T_g, rho);
     
-    return r;
+    return r*this->rate_scale_A;
 }
 
 double Electron_Level::dR_c_nl_dTe(double T_g, double rho)
 {
     double r=0.0;
+    T_g/=this->energy_scale;
     if(Recombination_flag==0) error_message_no_Rec_rate("dR_c_nl_dTe");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.dR_c_nl_dTe_Int(T_g, rho);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.dR_c_nl_dTe_Int(T_g, rho);
     
-    return r;
+    return r*this->rate_scale_A/this->energy_scale; // d / dTe == (dTe*/dTe) d / dTe* == 1/e_scale * d / dTe*
 }
 
 //====================================================================================================================
@@ -439,27 +452,29 @@ double Electron_Level::sig_phot_ion_nuc()
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.sig_phot_ion_nuc();
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.sig_phot_ion_nuc();
     
-    return r;
+    return r*this->sig_scale;
 }
 
 double Electron_Level::sig_phot_ion(double nu)
 { 
     double r=0.0;
+    nu/=this->energy_scale;
     if(Recombination_flag==0) error_message_no_Rec_rate("sig_phot_ion");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.sig_phot_ion(nu);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.sig_phot_ion(nu);
     
-    return r;
+    return r*this->sig_scale;
 }
 
 double Electron_Level::g_phot_ion(double nu)
 { 
     double r=0.0;
+    nu/=this->energy_scale;
     if(Recombination_flag==0) error_message_no_Rec_rate("g_phot_ion");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.g_phot_ion(nu);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.g_phot_ion(nu);
     
-    return r;
+    return r; // JC, CHECK again!
 }
 
 //====================================================================================================================
@@ -493,19 +508,19 @@ void error_message_upper_lower_confused(int nu, int nl)
 double Electron_Level::A21(double f_ul, int nu, int lu, int nl, int ll)                 // in 1/sec
 { 
     if(nu<nl) error_message_upper_lower_confused(nu, nl);
-    return -2.0*FOURPI*const_PIe2_mec*f_ul/pow(lambda_ul(nu, nl), 2); 
+    return -2.0*FOURPI*const_PIe2_mec*this->alpha_scale/this->me_scale*f_ul/pow(lambda_ul(nu, nl), 2);
 }
 
 double Electron_Level::B12(double f_lu, int nl, int nu)
 {
     if(nl>nu) error_message_upper_lower_confused(nu, nl);
-    return FOURPI/(nu_ul(nu, nl)*const_h)*const_PIe2_mec*f_lu;
+    return FOURPI/(nu_ul(nu, nl)*const_h)*const_PIe2_mec*this->alpha_scale/this->me_scale*f_lu;
 }  
 
 double Electron_Level::B21(double f_ul, int nu, int nl)
 { 
     if(nu<nl) error_message_upper_lower_confused(nu, nl);
-    return FOURPI/(nu_ul(nl, nu)*const_h)*const_PIe2_mec*f_ul;
+    return FOURPI/(nu_ul(nl, nu)*const_h)*const_PIe2_mec*this->alpha_scale/this->me_scale*f_ul;
 }
 
 //====================================================================================================================
@@ -797,8 +812,19 @@ void Gas_of_Atoms::init(int nS, int Z, double Np, bool Qlines_on, int Rec_flag, 
     Atom::init(nS, Z, Np, Qlines_on, Rec_flag, mflag);
     create_vectors_X(nS);
     
+    // Initialise the Voigt profiles using the member function
+    voigt_init(mflag);
+    
+    return;
+}
+
+//====================================================================================================================
+// -- Voigt Initialisation --
+// Redacts the code so that we are clear where the Voigt profiles are being created for Lyman lines [LH, Oct-Dec 2016]
+//====================================================================================================================
+void Gas_of_Atoms::voigt_init(int mflag) {
     //===========================================================
-    // create the Voigt profiles for Ly-n 
+    // Create the Voigt profiles for Ly-n
     //===========================================================
     double A21, f=0.0, nu21, lam21, Gamma=0;
     //
@@ -1320,8 +1346,8 @@ double Gas_of_Atoms::R_phot_tot_BB(int nlow)         // total photoionization ra
 double Gas_of_Atoms::Ni_NeNc_LTE(unsigned int i, double TM)
 { 
     double gi=2.0*(2.0*Get_l_of_Level(i)+1.0), gc=1.0;
-    return gi/2.0/gc*pow(const_lambdac, 3)
-                    *pow(2.0*PI*const_kb_mec2*TM*Level(i).Get_mu_red(), -1.5)
+    return gi/2.0/gc*pow(const_lambdac/this->me_scale, 3)
+                    *pow(2.0*PI*const_kb_mec2*this->me_scale*TM*Level(i).Get_mu_red(), -1.5)
                     *exp(Level(i).Get_E_ion_ergs()/const_kB/TM );
 }
 
@@ -1340,6 +1366,102 @@ double Gas_of_Atoms::Ni_Saha(unsigned int i, double Ne, double Nc, double TM)
 
 double Gas_of_Atoms::Ni_Saha(unsigned int n, unsigned int l, double Ne, double Nc, double TM)
 { return Ni_Saha(Get_Level_index(n, l), Ne, Nc, TM); }
+
+//====================================================================================================================
+// Scaling functions for hydrogenic atom. This includes all the scaling done so far (Dec 2016) for the hydrogen atom
+// including shells, levels, atom, gas hierarchy [LH, Oct-Dec 2016]
+//====================================================================================================================
+// For the levels
+//====================================================================================================================
+void Electron_Level::rescale_level(double alpha_scale, double me_scale) {
+    // Create ratios doubles for the scalings and redact a term for the energy scaling and Einst. scaling
+    double aratio = alpha_scale/this->FSC_scale;
+    double mratio = me_scale/this->ME_scale;
+    double E_scale = pow(aratio,2)*mratio;
+    double Dipole_scale = pow(aratio,5)*mratio;
+    double Quad_scale = pow(aratio,7)*mratio;
+    
+    // The local class variables need to be redefined (ground state energy etc.)
+    this->Dnu *= E_scale; // Scaling of energies listed in CosmoSpec
+    this->DE *= E_scale;
+    this->nuion *= E_scale;
+    this->Eion *= E_scale;
+    this->Eion_ergs *= E_scale;
+    this->A *= Dipole_scale; // Scaling of Einstein coefficients according to CosmoSpec (2015)
+    this->AE2 *= Quad_scale;
+    this->Gamma *= Dipole_scale;
+    this->Gamma_Q_E2 *= Quad_scale;
+    
+    // Now we iterate through the Transition Data vectors and scale each of the elements
+    vector<Transition_Data_A>::iterator x;
+    
+    // Rescale the LM1, LP1, LM2, LMP, LP2
+    for (x = A_values_down_lm1.begin(); x != A_values_down_lm1.end(); ++x) {x->Dnu *= E_scale; x->A21 *= Dipole_scale; x->lambda21 /= E_scale; }
+    for (x = A_values_down_lp1.begin(); x != A_values_down_lp1.end(); ++x) {x->Dnu *= E_scale; x->A21 *= Dipole_scale; x->lambda21 /= E_scale; }
+    for (x = A_values_down_lm2.begin(); x != A_values_down_lm2.end(); ++x) {x->Dnu *= E_scale; x->A21 *= Quad_scale; x->lambda21 /= E_scale; }
+    for (x = A_values_down_lmp.begin(); x != A_values_down_lmp.end(); ++x) {x->Dnu *= E_scale; x->A21 *= Quad_scale; x->lambda21 /= E_scale; }
+    for (x = A_values_down_lp2.begin(); x != A_values_down_lp2.end(); ++x) {x->Dnu *= E_scale; x->A21 *= Quad_scale; x->lambda21 /= E_scale; }
+    
+    // Keep for the end of the function as we want to reassign this variable after the rescaling of the levels
+    this->FSC_scale = alpha_scale;
+    this->ME_scale = me_scale;
+    this->energy_scale = pow(alpha_scale,2)*me_scale;
+    this->sig_scale = pow(alpha_scale,-1)*pow(me_scale,-2);
+    this->rate_scale_A = pow(alpha_scale/me_scale,2);
+    this->rate_scale_B = pow(alpha_scale,5)*me_scale;
+    return;
+}
+void Electron_Level::reset_level() {
+    // This will reset all the scalings and then reset the scaling variables afterwards
+    // Just by using the rescale_level function, we reset the variables as well.
+    this->rescale_level(1.,1.);
+    return;
+}
+
+//====================================================================================================================
+// For the shells
+//====================================================================================================================
+// Explicit rescaling of the atomic shell via each of the electorn levels within the Angular Momentum vector required
+void Atomic_Shell::rescale_shell(double alpha_scale, double me_scale) {
+    // Rescale each of the electron levels in the Angular momentum vector
+    for (vector<Electron_Level>::iterator i = Angular_Momentum_Level.begin(); i != Angular_Momentum_Level.end(); ++i){
+        i->rescale_level(alpha_scale, me_scale);
+    }
+    return;
+}
+// Explicit resetting of the atomic shell via the electron levels within the angular momentum vector
+void Atomic_Shell::reset_shell() {
+    // Reset all the electron levels in the angular momentum vector by using the Electron_Level reset function
+    this->rescale_shell(1.,1.);
+    return;
+}
+
+//====================================================================================================================
+// For the atoms
+//====================================================================================================================
+void Atom::rescale_atom(double alpha_scale, double me_scale) {
+    for (vector<Atomic_Shell>::iterator i = Shell.begin(); i != Shell.end(); ++i) {
+        i->rescale_shell(alpha_scale, me_scale);
+    }
+    return;
+}
+void Atom::reset_atom() {
+    this->rescale_atom(1.,1.);
+    return;
+}
+
+//====================================================================================================================
+// For the gases
+//====================================================================================================================
+void Gas_of_Atoms::rescale_gas(double alpha_scale, double me_scale){
+    // Firstly rescale the atom type for the gas of atoms
+    this->rescale_atom(alpha_scale, me_scale);
+    
+    // Need to reinitialise the Voigt profiles
+    this->voigt_init(1);
+    return;
+}
+void Gas_of_Atoms::reset_gas() { rescale_gas(1.,1.); return; }
 
 //====================================================================================================================
 //====================================================================================================================
