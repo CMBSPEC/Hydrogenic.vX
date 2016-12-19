@@ -228,8 +228,8 @@ class Electron_Level
         void reset_level();
         
         // Access functions for the fine structure constant scaling and the reduced mass scaling
-        double get_FSC() { return this->FSC_scale; }
-        double get_ME() { return this->ME_scale; }
+        double get_FSC_scale() { return this->FSC_scale; }
+        double get_ME_scale() { return this->ME_scale; }
 };
 
 //====================================================================================================================
