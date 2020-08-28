@@ -5,6 +5,7 @@
 // last change         : Aug  2014
 //====================================================================================================================
 // Oct-Dec 2016: added scaling of hydrogenic atom with alpha and me, LH
+// 04.08.2014: added recombination rate setup that avoids l-by-l setup with recursions (does not work well yet...)
 // 01.08.2014: fixed bug for transition data when quadrupole lines are activated
 // July  2014: tidied up the code; checked verbosity and recombination rates communication;
 // May   2011: Support for electric quadrupole lines were added.
@@ -110,6 +111,7 @@ class Electron_Level
         // for photoionization and recombination rate from/to the level (nn, ll)
         Rec_Phot_BB_SH Interaction_with_Photons_SH;     
         Rec_Phot_BB_SH_QSP Interaction_with_Photons_SH_QSP;     
+        Rec_Phot_BB_SH_QSP_II Interaction_with_Photons_SH_QSP_II;
 
         bool Atom_activate_Quadrupole_lines;
 
@@ -131,6 +133,20 @@ class Electron_Level
         void init(int n, int l, int nm, int Z, double Np, bool Qlines_on, 
                   int Rec_flag=0, int mflag=1);        
             
+        void init_parallel(int n, int l, int nm, int Z, double Np, bool Qlines_on,
+                           int Rec_flag=0, int mflag=1);
+    
+        void arm_spline_parallel();
+
+        //============================================================================================================
+        // Konstructor with quadrupole line support and new recombination rate setup
+        //============================================================================================================
+        Electron_Level(int n, int l, int nm, int Z, double Np, bool Qlines_on,
+                       vector<double> &lgxi, vector<double> &lggaunt, int mflag=1);
+    
+        void init(int n, int l, int nm, int Z, double Np, bool Qlines_on,
+                  vector<double> &lgxi, vector<double> &lggaunt, int mflag=1);
+    
         //============================================================================================================
         double DE_ul(int nu, int nl){return Z*Z*const_EH_inf*energy_scale*mu_red*(1.0/nl/nl-1.0/nu/nu); }   // in eV
         double nu_ul(int nu, int nl){return Z*Z*const_EH_inf_Hz*energy_scale*mu_red*(1.0/nl/nl-1.0/nu/nu);} // in Hz
@@ -217,6 +233,8 @@ class Electron_Level
         double sig_phot_ion_nuc();
         double sig_phot_ion(double nu);
         double g_phot_ion(double nu);
+        double sig_phot_ion_lim(double nu);
+        double g_phot_ion_lim(double nu);
         double phi_phot_ion(double nu);                                     // ionization profile
         double phi_phot_rec(double nu, double Tg, int ind_flg=1);           // recombination profile
     
@@ -393,6 +411,7 @@ class Gas_of_Atoms : public Atom
         // Rec_flag: 0 no recombination rates
         // Rec_flag: 1 Storey & Hummer with interpolation (very fast; avoids long recursions for high levels)
         // Rec_flag: 2 Storey & Hummer
+        // Rec_flag: 3 Storey & Hummer with interpolation improved (even faster than setup==1)
         //============================================================================================================
         Gas_of_Atoms();
         Gas_of_Atoms(int nS, int Z, double Np, int Rec_flag=0, int mflag=1);

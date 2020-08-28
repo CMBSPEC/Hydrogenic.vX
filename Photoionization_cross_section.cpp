@@ -24,9 +24,10 @@ using namespace std;
 //======================================================================================
 // global variables
 //======================================================================================
-double Photoionization_cross_section_thres_E=1.0e-8;
-double Photoionization_cross_section_thres_nu=1.0e-8;
-double Photoionization_cross_section_xi_max_limit_SH=1.0e+8;    // limit on nu/nu0. Beyond gnl=0
+const double Photoionization_cross_section_thres_E=1.0e-8;
+const double Photoionization_cross_section_thres_nu=1.0e-8;
+ // limit on nu/nu0. Beyond gnl=0
+const double Photoionization_cross_section_xi_max_limit_SH=1.0e+8;
 
 
 //======================================================================================
