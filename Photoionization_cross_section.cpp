@@ -1,12 +1,13 @@
 //======================================================================================
-// Author: Jens Chluba 
+// Author: Jens Chluba
 // last modification: Oct 2010
 // purpose: compute photoionization cross sections for hydrogenic atoms
-// 
-// The routines are based on Storey & Hummer, 1991. Notation and 
-// recursion relations can be found there. However, we modified these 
+//
+// The routines are based on Storey & Hummer, 1991. Notation and
+// recursion relations can be found there. However, we modified these
 // slightly to achieve better stability.
 //======================================================================================
+// 06.03.2017: added rescaling with alpha and me for SH routine [JC]
 // 04.08.2014: added gaunt factor version that returns values for l=0..n-1
 
 #include <iostream>
@@ -226,6 +227,12 @@ void Photoionization_cross_section_SH::init(int nv, int lv, int Z, double Np, in
     Photoionization_cross_section::init(nv, lv, Z, Np, mflag);
     nc=1000; 
 
+    // Fundamental variables scaling [JC, March 2017]
+    FSC_scale = 1.;
+    ME_scale = 1.;
+    energy_scale = 1.;
+    sig_scale = 1.;
+    
     if(nn>nc && mess_flag>0)
     {
         cout << " %==============================================================%" << endl;
@@ -236,8 +243,6 @@ void Photoionization_cross_section_SH::init(int nv, int lv, int Z, double Np, in
     sigma_nucval=sig_phot_ion(nu_threshold());
     gaunt_nucval=g_phot_ion(nu_threshold());
     
-    xi_small=nu_sig_phot_ion_small(1.0e-30)/Get_nu_ionization();
-
     return;
 }
 
@@ -261,6 +266,8 @@ double Photoionization_cross_section_SH::sig_phot_ion(const vector<double> &Rp1,
 double Photoionization_cross_section_SH::sig_phot_ion(double nu)
 {
     if(nn>nc) return sig_phot_ion_Kramers(nu);
+    
+    nu/=energy_scale;   // treat function as before but with rescaled energy [JC, March, 2017]
     if(nu<nu_ionization || nu>Photoionization_cross_section_xi_max_limit_SH*nu_ionization) return 0.0;
     
     //===============================================================================
@@ -278,7 +285,8 @@ double Photoionization_cross_section_SH::sig_phot_ion(double nu)
     Rp1.clear();
     Rm1.clear();
     
-    return r;
+    // rescale overall cross section [JC, March, 2017]
+    return r*sig_scale;
 }
 
 double Photoionization_cross_section_SH::g_phot_ion(double nu)
@@ -291,6 +299,7 @@ void Photoionization_cross_section_SH::g_phot_ion(double nu, vector<double> &g_p
 {
     g_phot_l.resize(nn);
     
+    nu/=energy_scale;   // treat function as before but with rescaled energy [JC, March, 2017]
     if(nu<nu_ionization || nu>Photoionization_cross_section_xi_max_limit_SH*nu_ionization)
         for(int l=0; l<nn; l++) g_phot_l[l]=1.0;
     
@@ -309,6 +318,9 @@ void Photoionization_cross_section_SH::g_phot_ion(double nu, vector<double> &g_p
     // FOURPI*const_alpha*pow(const_a0, 2)/3.0=8.5596557e-19 according to S&H 1991
     //===============================================================================
     double f_sig=FOURPI*const_alpha*pow(const_a0, 2)/3.0;
+
+    // rescale overall cross section [JC, March, 2017]
+    f_sig*=sig_scale;
     
     for(int l=0; l<nn; l++)
         g_phot_l[l]=f_sig*pow(1.0*Z*mu_red, -2)/sig_phot_ion_Kramers(nu)
@@ -337,8 +349,8 @@ double Photoionization_cross_section_SH_func_nu2sig_phot_ion_small(double *nu, v
 
 double Photoionization_cross_section_SH::nu_sig_phot_ion_small(double eps)
 {
-    double nu1=Get_nu_ionization();
-    double nu2=Get_nu_ionization()*Photoionization_cross_section_xi_max_limit_SH;
+    double nu1=nu_ionization;
+    double nu2=nu1*Photoionization_cross_section_xi_max_limit_SH;
 
     Photoionization_cross_section_SH_nu_sig_phot_ion_small Vars;
     Vars.SH_ptr=this;
@@ -348,9 +360,35 @@ double Photoionization_cross_section_SH::nu_sig_phot_ion_small(double eps)
     double ff=Photoionization_cross_section_SH_func_nu2sig_phot_ion_small(&nu1, params)*Photoionization_cross_section_SH_func_nu2sig_phot_ion_small(&nu2, params);
     
     if(ff<0.0) return find_root_brent(Photoionization_cross_section_SH_func_nu2sig_phot_ion_small, params, nu1, nu2, 1.0e-3);
-    else return Get_nu_ionization()*Photoionization_cross_section_xi_max_limit_SH;
+    else return nu2;
 }
 
+//===================================================================================
+// to include variations of alpha & me [March, 2017, JC]
+//===================================================================================
+void Photoionization_cross_section_SH::rescale_phot(double alp_scale, double me_scale)
+{
+    // save values and prepare rescaling of nu_ic and sig_ic
+    FSC_scale = alp_scale;
+    ME_scale = me_scale;
+    energy_scale = pow(alp_scale,2)*me_scale;
+    sig_scale = pow(alp_scale,-1)*pow(me_scale,-2);
+ 
+    return;
+}
+
+// override relevant base functions
+double Photoionization_cross_section_SH::Get_nu_ionization()
+{ return Photoionization_cross_section::Get_nu_ionization()*energy_scale; }
+
+double Photoionization_cross_section_SH::Get_E_ionization()
+{ return Photoionization_cross_section::Get_E_ionization()*energy_scale; }
+
+double Photoionization_cross_section_SH::Get_E_ionization_eV()
+{ return Photoionization_cross_section::Get_E_ionization_eV()*energy_scale; }
+
+double Photoionization_cross_section_SH::sig_phot_ion_Kramers(double nu)
+{ return Photoionization_cross_section::sig_phot_ion_Kramers(nu/energy_scale)*sig_scale; }
 
 //===================================================================================
 //

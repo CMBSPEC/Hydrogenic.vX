@@ -7,6 +7,7 @@
 // recursion relations can be found there. However, we modified these 
 // slightly to achieve better stability.
 //======================================================================================
+// 06.03.2017: added rescaling with alpha and me for SH routine [JC]
 // 04.08.2014: added gaunt factor version that returns values for l=0..n-1
 
 #ifndef PHOTO_IONIZATION_CROSS_SECTION_H
@@ -106,12 +107,19 @@ private:
     //==================================================================================
     // to norm of the emission profile (int sig_nl_c(nu) d nu )
     //==================================================================================
-    double xi_small;
     double sig_phot_ion(const vector<double> &Rp1, const vector<double> &Rm1);
     
     double sigma_nucval;
     double gaunt_nucval;
-    
+
+    //==================================================================================
+    // added by JC to rescale cross section with alp and me
+    //==================================================================================
+    double FSC_scale;          // Scaling of the fine structure constant alpha/alpha_ref
+    double ME_scale;           // Scaling of the electron mass me/me_ref
+    double energy_scale;       // Scaling of the energy based on FSC and ME scaling
+    double sig_scale;          // Scaling of the photoionisation cross section
+
 public:
     
     //==================================================================================
@@ -125,7 +133,7 @@ public:
     
     //==================================================================================
     double sig_phot_ion(double nu);
-    double sig_phot_ion_nuc(){ return sigma_nucval; };
+    double sig_phot_ion_nuc(){ return sigma_nucval*sig_scale; };
     double gaunt_nuc(){ return gaunt_nucval; };
     double nu_sig_phot_ion_small(double eps);
     
@@ -141,6 +149,22 @@ public:
     //==================================================================================
     double sig_phot_ion_E(double E){ return sig_phot_ion(E_e2nu(E));}
     double g_phot_ion_E(double E){ return g_phot_ion(E_e2nu(E));}
+    
+    //===================================================================================
+    // to include variations of alpha & me [March, 2017, JC]
+    //===================================================================================
+    void rescale_phot(double alp_scale, double me_scale);
+    void reset_phot(){ this->rescale_phot(1.,1.); }
+    
+    // Access functions for the fine structure constant scaling and the mass scaling
+    double get_FSC_scale() const { return this->FSC_scale; }
+    double get_ME_scale() const { return this->ME_scale; }
+
+    // override relevant base functions
+    double Get_nu_ionization();           // in Hz
+    double Get_E_ionization();            // in ergs
+    double Get_E_ionization_eV();         // in eV
+    double sig_phot_ion_Kramers(double nu);
 };
 
 

@@ -282,9 +282,7 @@ Rec_Phot_BB_SH_QSP::~Rec_Phot_BB_SH_QSP()
 //======================================================================================
 int Rec_Phot_BB_SH_QSP::calc_coeff_for_spline()
 {
-    double *xi=new double[nxi];
-    double *lgxi=new double[nxi];
-    double *gaunt=new double[nxi];
+    vector<double> xi(nxi), lgxi(nxi), gaunt(nxi);
     
     if(mess_flag>=2)
         cout << " Rec_Phot_BB_SH_QSP::calc_coeff_for_spline:" 
@@ -294,12 +292,13 @@ int Rec_Phot_BB_SH_QSP::calc_coeff_for_spline()
     //==================================================================================
     // fill xi array in log-scale but in two pieces if necessary
     //==================================================================================
-    if(min(xi_small, NAG_xi_max_spline)<=NAG_xi_max_spline_split) init_xarr(1.0, min(xi_small, NAG_xi_max_spline)*1.001, xi, nxi, 1, 0);
+    if(min(xi_small, NAG_xi_max_spline)<=NAG_xi_max_spline_split)
+        init_xarr(1.0, min(xi_small, NAG_xi_max_spline)*1.001, &xi[0], nxi, 1, 0);
     else 
     {
         int npl=nxi/2, nup=nxi-npl; 
         //
-        init_xarr(1.0, NAG_xi_max_spline_split, xi, npl, 1, 0); 
+        init_xarr(1.0, NAG_xi_max_spline_split, &xi[0], npl, 1, 0);
         //
         init_xarr(NAG_xi_max_spline_split, min(xi_small, NAG_xi_max_spline)*1.001, &xi[npl-1], nup+1, 1, 0);
     }
@@ -311,16 +310,15 @@ int Rec_Phot_BB_SH_QSP::calc_coeff_for_spline()
     for(int i=0; i<nxi; i++){ lgxi[i]=log(xi[i]); gaunt[i]=log(Photoionization_cross_section_SH::g_phot_ion(xi[i]*nu0)); }
     if(mess_flag>=2) for(int i=0; i<nxi; i++) cout << xi[i]*nu0 << " " << gaunt[i] << " " << Photoionization_cross_section_SH::g_phot_ion(xi[i]*nu0) << endl;
     
-    gsl_spline_init(spline, lgxi, gaunt, nxi);
+    gsl_spline_init(spline, &lgxi[0], &gaunt[0], nxi);
     
     if(mess_flag>=2) cout << " done..." << endl << endl;
     
     //==================================================================================
     // clean up
     //==================================================================================
-    delete[] xi;
-    delete[] lgxi;
-    delete[] gaunt;
+    xi.clear(); lgxi.clear(); gaunt.clear();
+    
     return 0;
 }
 

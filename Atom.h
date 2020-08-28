@@ -223,12 +223,12 @@ class Electron_Level
         //============================================================================================================
         // Rescaling and resetting of scaling functions for the electron level in question [LH, Oct-Dec 2016]
         //============================================================================================================
-        // Scale the electron variables by reduced mass and fine structure constant scaling
+        // Scale the electron variables by mass and fine structure constant scaling
         void rescale_level(double alpha_scale, double me_scale);
         // Reset the scaling we have used
         void reset_level();
         
-        // Access functions for the fine structure constant scaling and the reduced mass scaling
+        // Access functions for the fine structure constant scaling and the electron mass scaling
         double get_FSC_scale() { return this->FSC_scale; }
         double get_ME_scale() { return this->ME_scale; }
 };
@@ -372,7 +372,7 @@ class Gas_of_Atoms : public Atom
         // Voigt Initialisation [LH, Oct-Dec, 2016]
         //============================================================================================================
         // would like to call this both inside the initialisation and also during the rescaling of the energy levels
-        void voigt_init(int mflag=1);
+        void voigt_init(int mflag=0);
     
     public:
         
@@ -410,22 +410,37 @@ class Gas_of_Atoms : public Atom
         void Set_population_of_level(const unsigned int &i, const double &x);
         double Get_population_of_level(const unsigned int &n, const unsigned int &l) const;
         void Set_population_of_level(const unsigned int &n, const unsigned int &l, const double &x);
-        
+
         void Set_T(double TT){ T=TT; return; }
         double Get_T() const { return T; }
         void Set_N(double NN){ N=NN; return; }
         double Get_N() const { return N; }
         
         double Get_A(unsigned int n, unsigned int l, unsigned int np, unsigned int lp) const;
-        
+
         double X(const unsigned int &i){ return Get_population_of_level(i); }
         double X(const unsigned int &n, const unsigned int &l){ return Get_population_of_level(n, l); }
-        
+        void Set_Xi(const unsigned int &n, const unsigned int &l, const double &x)
+        { Set_population_of_level(n, l, x); }
+        void Set_Xi(const unsigned int &i, const double &x)
+        { Set_population_of_level(i, x); }
+
+        // ionization frequency in Hz
+        double Get_nu_ul(int i, int j) const { return Level(j).Get_nu_ion()-Level(i).Get_nu_ion(); }
+        double Get_gw(int i) const { return Level(i).Get_gw(); } // spin weight of level
+        double Get_gc() const { return 2.0; }                    // spin weight of continuum particle
+        double Get_nu_ion(int i) const { return Level(i).Get_nu_ion(); }
+        double Xi(const unsigned int &i){ return X(i); }
+        double Xi(const unsigned int &n, const unsigned int &l){ return X(n, l); }
+        double Get_mu_red() const { return Level(0).Get_mu_red(); }
+        bool Are_Quadrupole_lines_on() { return Atom_activate_Quadrupole_lines; }
+        double R_ic(const unsigned int &i, double T) { return Level(i).R_nl_c(T); }
+
         double X_tot() const;
         double X_tot(int nlow) const;                             // sum of all populations with n>=nlow
         double R_rec_tot_BB(int nlow, double T, double rho=1.0);  // total recombination rate from nlow upwards
         double R_phot_tot_BB(int nlow, double T);                 // total photoionization rate from nlow upwards
-        
+
         void clear_Interaction_w_photons();
         // for extensive numerical applications
         void update_Ric_BB(double T);
