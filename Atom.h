@@ -2,10 +2,10 @@
 // Author: Jens Chluba and Luke Hart
 //
 // first implementation: June 2005
-// last change         : Aug  2014
+// last change         : Aug  2020
 //====================================================================================================================
+// 28.08.2020: parallel setup is now possible [JC]
 // Oct-Dec 2016: added scaling of hydrogenic atom with alpha and me, LH
-// 04.08.2014: added recombination rate setup that avoids l-by-l setup with recursions (does not work well yet...)
 // 01.08.2014: fixed bug for transition data when quadrupole lines are activated
 // July  2014: tidied up the code; checked verbosity and recombination rates communication;
 // May   2011: Support for electric quadrupole lines were added.
@@ -57,7 +57,7 @@ class Electron_Level
         int mess_flag;                                 // for level of message output
         int Recombination_flag;                        // 0: no Recombination rates required
                                                        // 1: Storey & Hummer
-                                                       // 2: Karzas & Latter
+                                                       // 2: Storey & Hummer with interpolation
         
         double Dnu;                                    // transition frequency to ground state
         double DE;                                     // energy difference to ground state
@@ -111,7 +111,6 @@ class Electron_Level
         // for photoionization and recombination rate from/to the level (nn, ll)
         Rec_Phot_BB_SH Interaction_with_Photons_SH;     
         Rec_Phot_BB_SH_QSP Interaction_with_Photons_SH_QSP;     
-        Rec_Phot_BB_SH_QSP_II Interaction_with_Photons_SH_QSP_II;
 
         bool Atom_activate_Quadrupole_lines;
 
@@ -137,15 +136,6 @@ class Electron_Level
                            int Rec_flag=0, int mflag=1);
     
         void arm_spline_parallel();
-
-        //============================================================================================================
-        // Konstructor with quadrupole line support and new recombination rate setup
-        //============================================================================================================
-        Electron_Level(int n, int l, int nm, int Z, double Np, bool Qlines_on,
-                       vector<double> &lgxi, vector<double> &lggaunt, int mflag=1);
-    
-        void init(int n, int l, int nm, int Z, double Np, bool Qlines_on,
-                  vector<double> &lgxi, vector<double> &lggaunt, int mflag=1);
     
         //============================================================================================================
         double DE_ul(int nu, int nl){return Z*Z*const_EH_inf*energy_scale*mu_red*(1.0/nl/nl-1.0/nu/nu); }   // in eV

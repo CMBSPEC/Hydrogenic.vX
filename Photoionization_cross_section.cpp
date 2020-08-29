@@ -24,9 +24,8 @@ using namespace std;
 //======================================================================================
 // global variables
 //======================================================================================
-const double Photoionization_cross_section_thres_E=1.0e-8;
 const double Photoionization_cross_section_thres_nu=1.0e-8;
- // limit on nu/nu0. Beyond gnl=0
+// limit on nu/nu0. Beyond gnl=0
 const double Photoionization_cross_section_xi_max_limit_SH=1.0e+8;
 
 
@@ -63,7 +62,7 @@ double ln_f_Boardman_E_SH_root(int i, double E, double y)
 double PCS_Rt_stab_root_np(int np, double E)
 {
     double y=sqrt(E);
-    double logP=0.5*( ln_f_Boardman_E_SH_root(np, E, y) - 4.0*atan(np*y)/y - log( 1.0-exp( -2.0*PI/y ) ) ) ;    
+    double logP=0.5*( ln_f_Boardman_E_SH_root(np, E, y) - 4.0*atan(np*y)/y - log(one_minus_exp_mx(2.0*PI/y)) );
     return exp(logP/np);  
 }
 
@@ -269,7 +268,8 @@ double Photoionization_cross_section_SH::sig_phot_ion(double nu)
     if(nn>nc) return sig_phot_ion_Kramers(nu);
     
     nu/=energy_scale;   // treat function as before but with rescaled energy [JC, March, 2017]
-    if(nu<nu_ionization || nu>Photoionization_cross_section_xi_max_limit_SH*nu_ionization) return 0.0;
+    if(nu<nu_ionization || nu>Photoionization_cross_section_xi_max_limit_SH*nu_ionization)
+        return 0.0;
     
     //===============================================================================
     // to avoid the singularity at threshold energy
@@ -360,7 +360,9 @@ double Photoionization_cross_section_SH::nu_sig_phot_ion_small(double eps)
     
     double ff=Photoionization_cross_section_SH_func_nu2sig_phot_ion_small(&nu1, params)*Photoionization_cross_section_SH_func_nu2sig_phot_ion_small(&nu2, params);
     
-    if(ff<0.0) return find_root_brent(Photoionization_cross_section_SH_func_nu2sig_phot_ion_small, params, nu1, nu2, 1.0e-3);
+    if(ff<0.0)
+        return find_root_brent(Photoionization_cross_section_SH_func_nu2sig_phot_ion_small,
+                               params, nu1, nu2, 1.0e-3);
     else return nu2;
 }
 
@@ -427,7 +429,9 @@ double Photoionization_Lyc::sig_phot_ion(double nu)
 
 double Photoionization_Lyc::g_phot_ion(double nu)
 { 
-    if(nu<nu_ionization || nu>Photoionization_cross_section_xi_max_limit_SH*nu_ionization) return 0.0;
+    if(nu<nu_ionization || nu>Photoionization_cross_section_xi_max_limit_SH*nu_ionization)
+        return 0.0;
+
     //===================================================================================
     // to avoid the singularity at threshold energy
     //===================================================================================
@@ -435,6 +439,8 @@ double Photoionization_Lyc::g_phot_ion(double nu)
     
     double E=nu2E_e(nu), y=sqrt(E);
     
-    return 8.0*sqrt(3)*PI/(1.0+E)*exp(-4.0*atan(y)/y)/( 1.0-exp( -min(2.0*PI/y, 500.0) ) );
+    return 8.0*sqrt(3)*PI/(1.0+E)*exp(-4.0*atan(y)/y)/one_minus_exp_mx(2.0*PI/y);
 }
 
+//===================================================================================
+//===================================================================================

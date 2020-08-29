@@ -2,10 +2,10 @@
 // Author: Jens Chluba and Luke Hart
 //
 // first implementation: June 2005
-// last change         : Aug  2014
+// last change         : Aug  2020
 //====================================================================================================================
+// 28.08.2020: parallel setup is now possible [JC]
 // Oct-Dec 2016: added scaling of hydrogenic atom with alpha and me, LH
-// 04.08.2014: added recombination rate setup that avoids l-by-l setup with recursions (does not work well yet...)
 // 01.08.2014: fixed bug for transition data when quadrupole lines are activated
 // July  2014: tidied up the code; checked verbosity and recombination rates communication;
 // May   2011: Support for electric quadrupole lines were added.
@@ -30,7 +30,7 @@ using namespace std;
 // Konstructors and Destructors for Electron_Level
 //====================================================================================================================
 void Electron_Level::init_parallel(int n, int l, int nm, int ZZ, double NNp, bool Qlines_on,
-                          int Rec_flag, int mflag)
+                                   int Rec_flag, int mflag)
 {
     Atom_activate_Quadrupole_lines=Qlines_on;
     nn=n; ll=l; nmax=nm;
@@ -63,15 +63,9 @@ void Electron_Level::init_parallel(int n, int l, int nm, int ZZ, double NNp, boo
     else if(Recombination_flag==1) Interaction_with_Photons_SH_QSP.init_parallel(nn, ll, Z, Np, mess_flag);
     //else if(Recombination_flag==1) Interaction_with_Photons_SH_QSP.init(nn, ll, Z, Np, mess_flag);
     else if(Recombination_flag==2) Interaction_with_Photons_SH.init(nn, ll, Z, Np, mess_flag); 
-    else if(Recombination_flag==3)
+    else
     { 
-        if(mess_flag>=1) cerr << " Electron_Level::init: Use the other constructor for this case! " << endl;
-        exit(0);
-    }
-    else 
-    { 
-        if(mess_flag>=1) cerr << " Electron_Level::init: This recombination option does not exist" << endl;
-        exit(0); 
+        if(mess_flag>=1) throw_error("Electron_Level::init","This recombination option does not exist", 0);
     }
     
     calculate_transition_Data();
@@ -108,45 +102,6 @@ Electron_Level::Electron_Level(int n, int l, int nm, int Z, double Np, bool Qlin
 
 Electron_Level::Electron_Level(int n, int l, int nm, int Z, double Np, int Rec_flag, int mflag)
 { init(n, l, nm, Z, Np, 0, Rec_flag, mflag); }
-
-//====================================================================================================================
-// new recombination rate support
-//====================================================================================================================
-Electron_Level::Electron_Level(int n, int l, int nm, int Z, double Np, bool Qlines_on,
-                               vector<double> &lgxi, vector<double> &lggaunt, int mflag)
-{ init(n, l, nm, Z, Np, Qlines_on, lgxi, lggaunt, mflag); }
-
-void Electron_Level::init(int n, int l, int nm, int ZZ, double NNp, bool Qlines_on,
-                          vector<double> &lgxi, vector<double> &lggaunt, int mflag)
-{
-    Atom_activate_Quadrupole_lines=Qlines_on;
-    nn=n; ll=l; nmax=nm;
-    gw=2.0*(2.0*l+1.0);
-    Z=ZZ;
-    Np=NNp;
-    mu_red=1.0/(1.0+const_me_mp/Np);
-    
-    Recombination_flag=3;
-    mess_flag=mflag;
-    
-    DE=DE_ul(nn, 1);
-    Dnu=nu_ul(nn, 1);
-    Eion=E_ion(nn);
-    Eion_ergs=E_ion_ergs(nn);
-    nuion=nu_ion(nn);
-    
-    Interaction_with_Photons_SH_QSP_II.init(nn, ll, Z, Np, lgxi, lggaunt, mess_flag);
-    
-    calculate_transition_Data();
-    
-    A=calculate_A_tot();
-    Gamma=A/FOURPI;
-    
-    AE2=calculate_A_tot_E2();
-    Gamma_Q_E2=AE2/FOURPI;
-    
-    return;
-}
 
 //====================================================================================================================
 Electron_Level::~Electron_Level()
@@ -455,8 +410,7 @@ void Electron_Level::clear_Interaction_w_photons()
     if(Recombination_flag==0) error_message_no_Rec_rate("clear_Interaction_w_photons");
     else if(Recombination_flag==1) Interaction_with_Photons_SH_QSP.clear();
     else if(Recombination_flag==2) Interaction_with_Photons_SH.clear();
-    else if(Recombination_flag==3) Interaction_with_Photons_SH_QSP_II.clear();
-    
+
     return;
 }
 
@@ -466,8 +420,7 @@ double Electron_Level::Get_nu_ionization()
     if(Recombination_flag==0) error_message_no_Rec_rate("Get_nu_ionization");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.Get_nu_ionization();
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.Get_nu_ionization();
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.Get_nu_ionization();
-    
+
     return r*this->energy_scale;
 }        
 
@@ -479,8 +432,7 @@ double Electron_Level::R_nl_c(double T_g)
     if(Recombination_flag==0)  error_message_no_Rec_rate("R_nl_c");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.R_nl_c_Int(T_g);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.R_nl_c_Int(T_g);
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.R_nl_c_Int(T_g);
-    
+
     return r*this->rate_scale_B;
 }
 
@@ -491,8 +443,7 @@ double Electron_Level::R_c_nl(double T_g, double rho)
     if(Recombination_flag==0) error_message_no_Rec_rate("R_c_nl");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.R_c_nl_Int(T_g, rho);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.R_c_nl_Int(T_g, rho);
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.R_c_nl_Int(T_g, rho);
-    
+
     return r*this->rate_scale_A;
 }
 
@@ -503,8 +454,7 @@ double Electron_Level::dR_c_nl_dTe(double T_g, double rho)
     if(Recombination_flag==0) error_message_no_Rec_rate("dR_c_nl_dTe");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.dR_c_nl_dTe_Int(T_g, rho);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.dR_c_nl_dTe_Int(T_g, rho);
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.dR_c_nl_dTe_Int(T_g, rho);
-    
+
     return r*this->rate_scale_A/this->energy_scale; // d / dTe == (dTe*/dTe) d / dTe* == 1/e_scale * d / dTe*
 }
 
@@ -515,8 +465,7 @@ double Electron_Level::sig_phot_ion_nuc()
     if(Recombination_flag==0) error_message_no_Rec_rate("sig_phot_ion_nuc");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.sig_phot_ion_nuc();
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.sig_phot_ion_nuc();
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.sig_phot_ion_nuc();
-    
+
     return r*this->sig_scale;
 }
 
@@ -527,8 +476,7 @@ double Electron_Level::sig_phot_ion(double nu)
     if(Recombination_flag==0) error_message_no_Rec_rate("sig_phot_ion");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.sig_phot_ion(nu);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.sig_phot_ion(nu);
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.sig_phot_ion(nu);
-    
+
     return r*this->sig_scale;
 }
 
@@ -539,8 +487,7 @@ double Electron_Level::g_phot_ion(double nu)
     if(Recombination_flag==0) error_message_no_Rec_rate("g_phot_ion");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.g_phot_ion(nu);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.g_phot_ion(nu);
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.g_phot_ion(nu);
-    
+
     return r; // JC, CHECK again --> should be correct since Gaunt-factor dimensionless.
 }
 
@@ -551,8 +498,7 @@ double Electron_Level::sig_phot_ion_lim(double nu)
     if(Recombination_flag==0) error_message_no_Rec_rate("sig_phot_ion");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.sig_phot_ion_lim(nu);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.sig_phot_ion_lim(nu);
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.sig_phot_ion(nu);
-    
+
     return r; // JC, CHECK again --> should be correct since Gaunt-factor dimensionless.
 }
 
@@ -563,8 +509,7 @@ double Electron_Level::g_phot_ion_lim(double nu)
     if(Recombination_flag==0) error_message_no_Rec_rate("g_phot_ion");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.g_phot_ion_lim(nu);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.g_phot_ion(nu);
-    else if(Recombination_flag==3) r=Interaction_with_Photons_SH_QSP_II.g_phot_ion(nu);
-    
+
     return r; // JC, CHECK again --> should be correct since Gaunt-factor dimensionless.
 }
 
@@ -696,58 +641,11 @@ void Atomic_Shell::create_Electron_Levels(bool Qlines_on, int Rec_flag)
     //======================================================================================================
     // set up recombination gaunt-factors for splines, if requested (04.08.2014 JC)
     //======================================================================================================
-    if(Rec_flag==3)
-    {
-        Photoionization_cross_section_SH SH(nn, nn-1, Z, Np, mess_flag);
-        
-        // spline settings
-        int nxi=1024;
-        vector<double> lgxi(nxi);
-        vector<double> g_phot_l(nxi);
-        vector<vector<double> > lggaunt(nn, g_phot_l);
-        double nuc=SH.Get_nu_ionization();
-        double xsmall=250.0;
-        //init_xarr(1.0, xsmall, &lgxi[0], nxi, 1, 0);
-        
-        // split domain up
-        int npl=nxi/2, nup=nxi-npl;
-        init_xarr(1.0, 30.0, &lgxi[0], npl, 1, 0);
-        init_xarr(30.0, xsmall, &lgxi[npl-1], nup+1, 1, 0);
-
-        // compute gaunt factor for all states n, l==0..n-1
-        SH.g_phot_ion(nuc, g_phot_l);
-        for(l=0; l<nn; l++) lggaunt[l][0]=log(g_phot_l[l]);
-/*
-        cout << SH.nu_sig_phot_ion_small(1.0e-30)/nuc << endl;
-        wait_f_r();
-
-        if(nn>100){ SH.init(nn, nn/2, Z, Np, mess_flag);
-        cout << SH.nu_sig_phot_ion_small(1.0e-30)/nuc << endl;
-        wait_f_r();
-        }
-*/
-        for(int k=1; k<nxi; k++)
-        {
-            SH.g_phot_ion(lgxi[k]*nuc, g_phot_l);
-            
-            for(l=0; l<nn; l++) lggaunt[l][k]=log(g_phot_l[l]);
-        }
-
-        for(int k=0; k<nxi; k++) lgxi[k]=log(lgxi[k]);
-
-    // now initialize each state
-    for(l=0; l<nn; l++) 
-            Angular_Momentum_Level[l].init(nn, l, nmax, Z, Np, Qlines_on, lgxi, lggaunt[l], mess_flag);
-    }
-    //======================================================================================================
-    else
-    {
 #pragma omp parallel for default(shared) schedule(dynamic)
-        // initialize each state
-        for(l=0; l<nn; l++)
-            Angular_Momentum_Level[l].init_parallel(nn, l, nmax, Z, Np, Qlines_on, Rec_flag, mess_flag);
+    // initialize each state
+    for(l=0; l<nn; l++)
+        Angular_Momentum_Level[l].init_parallel(nn, l, nmax, Z, Np, Qlines_on, Rec_flag, mess_flag);
 #pragma omp barrier
-    }
 
     // for parallel setup this will cause problems if not done serial...
     for(l=0; l<nn; l++) Angular_Momentum_Level[l].arm_spline_parallel();
@@ -826,9 +724,6 @@ void Atom::create_Shells(bool Qlines_on, int Rec_flag)
                  << endl;
         else if(Rec_flag==2) 
             cout << " %                     Storey & Hummer Recombination rates will be setup" << endl;
-        else if(Rec_flag==3) 
-            cout << " %                     Storey & Hummer Recombination rates with interpolation will be setup II"
-                 << endl;
 
         if(Atom_activate_Quadrupole_lines) 
             cout << " %                     Quadrupole lines are switched on" << endl;
