@@ -1396,12 +1396,12 @@ double Gas_of_Atoms::Ni_NeNc_LTE(unsigned int i, double TM)
 double Gas_of_Atoms::Ni_NeNc_LTE(unsigned int n, unsigned int l, double TM)
 { return Ni_NeNc_LTE(Get_Level_index(n, l), TM); }
 
-double Gas_of_Atoms::Xi_Saha(unsigned int i, double Xe, double Xc, double NH, double TM, double z)
+double Gas_of_Atoms::Xi_Saha(unsigned int i, double Xe, double Xc, double NH, double TM)
 { return Xe*Xc*NH*Ni_NeNc_LTE(i, TM); }
 
 double Gas_of_Atoms::Xi_Saha(unsigned int n, unsigned int l, double Xe, double Xc, 
-                             double NH, double TM, double z)
-{ return Xi_Saha(Get_Level_index(n, l), Xe, Xc, NH, T, z); }
+                             double NH, double TM)
+{ return Xi_Saha(Get_Level_index(n, l), Xe, Xc, NH, TM); }
 
 double Gas_of_Atoms::Ni_Saha(unsigned int i, double Ne, double Nc, double TM)
 { return Ne*Nc*Ni_NeNc_LTE(i, TM); }

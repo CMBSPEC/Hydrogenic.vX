@@ -21,6 +21,7 @@
 //====================================================================================================================
 #include <vector>
 
+#include "routines.h"
 #include "Rec_Phot_BB.h"
 #include "Voigtprofiles.h"
 #include "physical_consts.h"
@@ -239,6 +240,7 @@ class Electron_Level
         // Access functions for the fine structure constant scaling and the electron mass scaling
         double get_FSC_scale() { return this->FSC_scale; }
         double get_ME_scale() { return this->ME_scale; }
+        double get_B_scale() { return this->rate_scale_B; }
 };
 
 //====================================================================================================================
@@ -343,6 +345,14 @@ class Atom
         int Get_Level_index(const unsigned int &n, const unsigned int &l) const { return l+n*(n-1)/2; } // n>=1
         int Get_n_of_Level(const unsigned int &i) const { return Level_Map[i].n; }
         int Get_l_of_Level(const unsigned int &i) const { return Level_Map[i].l; }
+
+        int Get_n(int i) const { return Level_Map[i].n; }
+        int Get_l(int i) const { return Level_Map[i].l; }
+        int Get_S(const unsigned int &i) const
+        { throw_error("Get_S","Invalid! Hydrogenic does not have an 'S' level!",0); return 0;}
+        int Get_J(const unsigned int &i) const
+        { throw_error("Get_J","Invalid! Hydrogenic does not have a 'J' level!",0); return 0; }
+
         unsigned int Get_total_number_of_Levels() const { return Level_Map.size(); }
         int Get_number_of_Levels_until(int nmax) const { return nmax*(nmax+1)/2; }
         
@@ -478,8 +488,8 @@ class Gas_of_Atoms : public Atom
         double Ni_NeNc_LTE(unsigned int n, unsigned int l, double TM);
         double Ni_NeNc_LTE(unsigned int i, double TM);
         
-        double Xi_Saha(unsigned int n, unsigned int l, double Xe, double Xc, double NH, double TM, double z);
-        double Xi_Saha(unsigned int i, double Xe, double Xc, double NH, double TM, double z);
+        double Xi_Saha(unsigned int n, unsigned int l, double Xe, double Xc, double NH, double TM);
+        double Xi_Saha(unsigned int i, double Xe, double Xc, double NH, double TM);
         
         double Ni_Saha(unsigned int n, unsigned int l, double Ne, double Nc, double TM);
         double Ni_Saha(unsigned int i, double Ne, double Nc, double TM);

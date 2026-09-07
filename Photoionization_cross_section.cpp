@@ -362,7 +362,7 @@ double Photoionization_cross_section_SH::nu_sig_phot_ion_small(double eps)
     
     if(ff<0.0)
         return find_root_brent(Photoionization_cross_section_SH_func_nu2sig_phot_ion_small,
-                               params, nu1, nu2, 1.0e-3);
+                               params, nu1, nu2, 1.0e-3, "nu_sig_phot_ion_small");
     else return nu2;
 }
 
