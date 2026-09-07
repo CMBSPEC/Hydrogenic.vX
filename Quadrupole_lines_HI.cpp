@@ -226,15 +226,16 @@ double A_E2_Quadrupole(int Z, double Np, int n, int l, int np, int lp)
     //----------------------------------------------------------------------------------------------
     // arrays for (1)^X^{n l}_{np l-1} and (1)^X^{n l}_{np l+1}
     //----------------------------------------------------------------------------------------------
-    vector<double> Xnp_lm1_E1(np+4, 0.0);
-    vector<double> Xnp_lp1_E1(np+4, 0.0);
+    int vec_size = n+4;                                         // n, l or lp never larger than this
+    vector<double> Xnp_lm1_E1(vec_size, 0.0);
+    vector<double> Xnp_lp1_E1(vec_size, 0.0);
     
     //----------------------------------------------------------------------------------------------
     // arrays for (2)^X^{n l}_{np l}, (2)^X^{n l}_{np l-2} and (2)^X^{n l}_{np l+2}
     //----------------------------------------------------------------------------------------------
-    vector<double> Xnp_lmp_E2(np+4, 0.0);
-    vector<double> Xnp_lm2_E2(np+4, 0.0);
-    vector<double> Xnp_lp2_E2(np+4, 0.0);
+    vector<double> Xnp_lmp_E2(vec_size, 0.0);
+    vector<double> Xnp_lm2_E2(vec_size, 0.0);
+    vector<double> Xnp_lp2_E2(vec_size, 0.0);
 
     //----------------------------------------------------------------------------------------------
     // compute dipole matrix elements
@@ -304,15 +305,16 @@ void A_E1_E2_Quadrupole(int Z, double Np, int n, int l, int np,
     //----------------------------------------------------------------------------------------------
     // arrays for (1)^X^{n l}_{np l-1} and (1)^X^{n l}_{np l+1}
     //----------------------------------------------------------------------------------------------
-    vector<double> Xnp_lm1_E1(np+4, 0.0);
-    vector<double> Xnp_lp1_E1(np+4, 0.0);
+    int vec_size = n+4;                                         // n, l or lp never larger than this
+    vector<double> Xnp_lm1_E1(vec_size, 0.0);
+    vector<double> Xnp_lp1_E1(vec_size, 0.0);
     
     //----------------------------------------------------------------------------------------------
     // arrays for (2)^X^{n l}_{np l}, (2)^X^{n l}_{np l-2} and (2)^X^{n l}_{np l+2}
     //----------------------------------------------------------------------------------------------
-    vector<double> Xnp_lmp_E2(np+4, 0.0);
-    vector<double> Xnp_lm2_E2(np+4, 0.0);
-    vector<double> Xnp_lp2_E2(np+4, 0.0);
+    vector<double> Xnp_lmp_E2(vec_size, 0.0);
+    vector<double> Xnp_lm2_E2(vec_size, 0.0);
+    vector<double> Xnp_lp2_E2(vec_size, 0.0);
     
     //----------------------------------------------------------------------------------------------
     // compute dipole matrix elements
