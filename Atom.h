@@ -57,8 +57,8 @@ class Electron_Level
         
         int mess_flag;                                 // for level of message output
         int Recombination_flag;                        // 0: no Recombination rates required
-                                                       // 1: Storey & Hummer
-                                                       // 2: Storey & Hummer with interpolation
+                                                       // 1: Storey & Hummer with interpolation
+                                                       // 2: Storey & Hummer
         
         double Dnu;                                    // transition frequency to ground state
         double DE;                                     // energy difference to ground state
@@ -119,7 +119,13 @@ class Electron_Level
         //============================================================================================================
         // Konstructors and Destructors
         //============================================================================================================
-        Electron_Level(){}
+        Electron_Level():
+            nn(0), ll(0), gw(0.0), nmax(0), Z(0), Np(0.0), mu_red(0.0),
+            mess_flag(0), Recombination_flag(0), Dnu(0.0), DE(0.0), nuion(0.0),
+            Eion(0.0), Eion_ergs(0.0), A(0.0), AE2(0.0), Gamma(0.0), Gamma_Q_E2(0.0),
+            FSC_scale(1.0), ME_scale(1.0), energy_scale(1.0), sig_scale(1.0),
+            rate_scale_A(1.0), rate_scale_B(1.0), ZERO_Data(), Atom_activate_Quadrupole_lines(0)
+        {}
         Electron_Level(int n, int l, int nm, int Z, double Np, int Rec_flag=0, int mflag=1);   
         ~Electron_Level();
         void init(int n, int l, int nm, int Z, double Np, int Rec_flag=0, int mflag=1);        
@@ -159,6 +165,9 @@ class Electron_Level
         double Get_E_ion_ergs() const {return Eion_ergs;} // ionization energy in ergs
         double Get_nu_ion() const { return nuion;}        // ionization frequency
         double Get_A() const { return A;}                 // total down transition rate in 1/sec
+        double Get_A_tot() const { return A;}             // total down transition rate in 1/sec
+        double Get_A_E1() const { return A-AE2;}          // total dipole down transition rate in 1/sec
+        double Get_A_E2() const { return AE2;}            // total quadrupole down transition rate in 1/sec
         double Get_tau() const { return 1.0/A;}           // life time of level in sec
         double Get_Gamma() const { return Gamma;} 
         double Get_Gamma_E1() const { return Gamma-Gamma_Q_E2;} 
@@ -240,7 +249,6 @@ class Electron_Level
         // Access functions for the fine structure constant scaling and the electron mass scaling
         double get_FSC_scale() { return this->FSC_scale; }
         double get_ME_scale() { return this->ME_scale; }
-        double get_B_scale() { return this->rate_scale_B; }
 };
 
 //====================================================================================================================
@@ -261,7 +269,9 @@ class Atomic_Shell
         //============================================================================================================
         // Konstructors and Destructors
         //============================================================================================================
-        Atomic_Shell(){}
+        Atomic_Shell():
+            nn(0), nmax(0), Z(0), Np(0.0), mess_flag(0), Atom_activate_Quadrupole_lines(0)
+        {}
         Atomic_Shell(int n, int nm, int Z, double Np, int Rec_flag=0, int mflag=1);
         ~Atomic_Shell();
         void init(int n, int nm, int Z, double Np, int Rec_flag=0, int mflag=1);
@@ -381,6 +391,9 @@ class Gas_of_Atoms : public Atom
         vector< vector<double> > dRci_dTe_BB_vec;             // derivative with respect to Te    (T is necessary)
         
         void create_vectors_X(int imax);
+        bool invalid_nl_index(const vector< vector<double> > &vec,
+                              const unsigned int &n,
+                              const unsigned int &l) const;
         
         Voigtprofile_Dawson phi_HI_Lyn [101];
         Voigtprofile_Dawson phi_HI_nD1s[101];
@@ -411,7 +424,6 @@ class Gas_of_Atoms : public Atom
         // Rec_flag: 0 no recombination rates
         // Rec_flag: 1 Storey & Hummer with interpolation (very fast; avoids long recursions for high levels)
         // Rec_flag: 2 Storey & Hummer
-        // Rec_flag: 3 Storey & Hummer with interpolation improved (even faster than setup==1)
         //============================================================================================================
         Gas_of_Atoms();
         Gas_of_Atoms(int nS, int Z, double Np, int Rec_flag=0, int mflag=1);
@@ -505,4 +517,3 @@ class Gas_of_Atoms : public Atom
 
 //====================================================================================================================
 //====================================================================================================================
-

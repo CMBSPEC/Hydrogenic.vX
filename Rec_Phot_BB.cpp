@@ -295,6 +295,7 @@ void Rec_Phot_BB_SH_QSP::init_parallel(int nv, int lv, int Z, double Np, int mfl
 
 void Rec_Phot_BB_SH_QSP::init(int nv, int lv, int Z, double Np, int mflag)
 {
+    if(spline_is_allocated==1) clear();      // safeguard [06/09/2026 JC]
     spline_is_allocated=spline_is_setup=0;
     init_parallel(nv, lv, Z, Np, mflag);
     arm_spline_parallel();
@@ -303,8 +304,16 @@ void Rec_Phot_BB_SH_QSP::init(int nv, int lv, int Z, double Np, int mflag)
 
 void Rec_Phot_BB_SH_QSP::clear()
 {
-    gsl_spline_free(spline);
-    gsl_interp_accel_free(acc);
+    // Bug fixed 06/09/2026 [JC+Codex]
+    //gsl_spline_free(spline);
+    //gsl_interp_accel_free(acc);
+    if(spline_is_allocated==1)
+    {
+        gsl_spline_free(spline);
+        gsl_interp_accel_free(acc);
+    }
+    spline=NULL;
+    acc=NULL;
     spline_is_allocated=spline_is_setup=0;
     Photoionization_cross_section_SH::clear();
     return;
@@ -312,10 +321,11 @@ void Rec_Phot_BB_SH_QSP::clear()
 
 //====================================================================================================================
 Rec_Phot_BB_SH_QSP::Rec_Phot_BB_SH_QSP():Photoionization_cross_section_SH()
-{ spline_is_allocated=spline_is_setup=0; }
+{ spline_is_allocated=spline_is_setup=0; acc=NULL; spline=NULL; }
 
 Rec_Phot_BB_SH_QSP::Rec_Phot_BB_SH_QSP(int nv, int lv, int Z, double Np, int mflag):Photoionization_cross_section_SH()
 {
+    spline_is_allocated=spline_is_setup=0; acc=NULL; spline=NULL;
     init(nv, lv, Z, Np, mflag);
 }
 

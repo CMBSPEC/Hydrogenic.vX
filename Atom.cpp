@@ -93,7 +93,9 @@ void Electron_Level::init(int n, int l, int nm, int ZZ, double NNp, bool Qlines_
 }
 
 void Electron_Level::init(int n, int l, int nm, int ZZ, double NNp, int Rec_flag, int mflag)
-{ init(n, l, nm, Z, Np, 0, Rec_flag, mflag); return; }
+// Bug fixed 06/09/2026 [JC+Codex]
+//{ init(n, l, nm, Z, Np, 0, Rec_flag, mflag); return; }
+{ init(n, l, nm, ZZ, NNp, 0, Rec_flag, mflag); return; }
 
 //====================================================================================================================
 Electron_Level::Electron_Level(int n, int l, int nm, int Z, double Np, bool Qlines_on, 
@@ -499,16 +501,20 @@ double Electron_Level::sig_phot_ion_lim(double nu)
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.sig_phot_ion_lim(nu);
     else if(Recombination_flag==2) r=Interaction_with_Photons_SH.sig_phot_ion_lim(nu);
 
-    return r; // JC, CHECK again --> should be correct since Gaunt-factor dimensionless.
+    // Bug fixed 06/09/2026 [JC+Codex]
+    //return r;
+    return r*this->sig_scale;
 }
 
 double Electron_Level::g_phot_ion_lim(double nu)
 {
     double r=0.0;
     nu/=this->energy_scale;
-    if(Recombination_flag==0) error_message_no_Rec_rate("g_phot_ion");
+    if(Recombination_flag==0) error_message_no_Rec_rate("g_phot_ion_lim");
     else if(Recombination_flag==1) r=Interaction_with_Photons_SH_QSP.g_phot_ion_lim(nu);
-    else if(Recombination_flag==2) r=Interaction_with_Photons_SH.g_phot_ion(nu);
+    // Bug fixed 06/09/2026 [JC+Codex]
+    //else if(Recombination_flag==2) r=Interaction_with_Photons_SH.g_phot_ion(nu);
+    else if(Recombination_flag==2) r=Interaction_with_Photons_SH.g_phot_ion_lim(nu);
 
     return r; // JC, CHECK again --> should be correct since Gaunt-factor dimensionless.
 }
@@ -711,6 +717,10 @@ Atom::~Atom()
 //====================================================================================================================
 void Atom::create_Shells(bool Qlines_on, int Rec_flag)
 {
+    // safeguard 06/09/2026 [JC+Codex]
+    if(Rec_flag<0 || Rec_flag>2)
+        throw_error("Atom::create_Shells","This recombination option does not exist", 0);
+
     if(mess_flag>-1)
     {
         cout << "\n %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++%\n %" << endl;
@@ -736,10 +746,8 @@ void Atom::create_Shells(bool Qlines_on, int Rec_flag)
     
     // free memory (if necessary)
     Shell.clear();
-    
-    Atomic_Shell v;
-    // fill with empty shells
-    for(unsigned int n=0; n<=nShells; n++) Shell.push_back(v);
+    // prepare space
+    Shell.resize(nShells+1);
     // create each shells
     for(unsigned int n=1; n<=nShells; n++) 
         Shell[n].init(n, nShells, Z, Np, Qlines_on, Rec_flag, m); 
@@ -750,7 +758,7 @@ void Atom::create_Shells(bool Qlines_on, int Rec_flag)
 //====================================================================================================================
 void Atom::display_general_data_of_Shell(unsigned int i)
 {
-    if(i>=(unsigned int)(nShells) || i==0 || Shell.size()==0)
+    if(i>(unsigned int)(nShells) || i==0 || Shell.size()==0)
     {
         cout << " This Shell does not exist inside Atom " << endl;
         return;
@@ -797,8 +805,10 @@ void Atom::display_Level_Map()
 
 //====================================================================================================================
 const Electron_Level& Atom::Level(const unsigned int &i) const
-{ 
-    if(i> Get_total_number_of_Levels())
+{
+    // Bug fixed 06/09/2026 [JC+Codex]
+    //if(i> Get_total_number_of_Levels())
+    if(i>= Get_total_number_of_Levels())
     {
         cout << " Atom::Level: you are trying to access a non-existing level: " << i 
              << " total number of levels: " << Get_total_number_of_Levels() << endl;
@@ -822,7 +832,9 @@ const Electron_Level& Atom::Level(const unsigned int &n, const unsigned int &l) 
 
 Electron_Level& Atom::Level(const unsigned int &i) 
 { 
-    if(i> Get_total_number_of_Levels())
+    // Bug fixed 06/09/2026 [JC+Codex]
+    //if(i> Get_total_number_of_Levels())
+    if(i>= Get_total_number_of_Levels())
     {
         cout << " Atom::Level: you are trying to access a non-existing level: " << i 
              << " total number of levels: " << Get_total_number_of_Levels() << endl;
@@ -1070,6 +1082,15 @@ void Gas_of_Atoms::create_vectors_X(int imax)
     return;
 }
 
+bool Gas_of_Atoms::invalid_nl_index(const vector< vector<double> > &vec,
+                                    const unsigned int &n,
+                                    const unsigned int &l) const
+{
+    // Bug fixed 06/09/2026 [JC+Codex]
+    //return (n==0 || n>vec.size() || l>=vec[n].size());
+    return (n==0 || n>=vec.size() || l>=vec[n].size());
+}
+
 //====================================================================================================================
 double Gas_of_Atoms::Get_A(unsigned int n, unsigned int l, unsigned int np, unsigned int lp) const
 { return Level(n, l).Get_A21(np, lp); }
@@ -1104,7 +1125,7 @@ void Gas_of_Atoms::Set_population_of_level(const unsigned int &i, const double &
 
 double Gas_of_Atoms::Get_population_of_level(const unsigned int &n, const unsigned int &l) const
 { 
-    if(n==0 || n>Xvec.size() || l>=Xvec[n].size())
+    if(invalid_nl_index(Xvec, n, l))
     {
         cout << " Gas_of_Atoms::Get_population_of_level:"
              << " you are trying to access a non-existing level: " 
@@ -1117,7 +1138,7 @@ double Gas_of_Atoms::Get_population_of_level(const unsigned int &n, const unsign
 
 void Gas_of_Atoms::Set_population_of_level(const unsigned int &n, const unsigned int &l, const double &XX)
 { 
-    if(n==0 || n>Xvec.size() || l>=Xvec[n].size())
+    if(invalid_nl_index(Xvec, n, l))
     {
         cout << " Gas_of_Atoms::Set_population_of_level:"
              << " you are trying to access a non-existing level: " 
@@ -1245,7 +1266,7 @@ void Gas_of_Atoms::update_dRci_dTe_BB(int nm, double TT, double rho)
 //====================================================================================================================
 void Gas_of_Atoms::Set_Ric_rate(const unsigned int &n, const unsigned int &l, const double &Ric)
 { 
-    if(n==0 || n>Ric_BB_vec.size() || l>=Ric_BB_vec[n].size())
+    if(invalid_nl_index(Ric_BB_vec, n, l))
     {
         cout << " Gas_of_Atoms::Set_Ric_rate: you are trying to access a non-existing level: " 
              << "( " << n << ", " << l << " )" << endl;
@@ -1258,7 +1279,7 @@ void Gas_of_Atoms::Set_Ric_rate(const unsigned int &n, const unsigned int &l, co
 
 void Gas_of_Atoms::Set_Rci_rate(const unsigned int &n, const unsigned int &l, const double &Rci) 
 { 
-    if(n==0 || n>Rci_BB_vec.size() || l>=Rci_BB_vec[n].size())
+    if(invalid_nl_index(Rci_BB_vec, n, l))
     {
         cout << " Gas_of_Atoms::Set_Rci_rate: you are trying to access a non-existing level: " 
              << "( " << n << ", " << l << " )" << endl;
@@ -1272,7 +1293,7 @@ void Gas_of_Atoms::Set_Rci_rate(const unsigned int &n, const unsigned int &l, co
 void Gas_of_Atoms::Set_dRci_dTe_rate(const unsigned int &n, const unsigned int &l, 
                                      const double &dRci_dTe) 
 { 
-    if(n==0 || n>dRci_dTe_BB_vec.size() || l>=dRci_dTe_BB_vec[n].size())
+    if(invalid_nl_index(dRci_dTe_BB_vec, n, l))
     {
         cout << " Gas_of_Atoms::Set_dRci_dTe_rate: you are trying to access a non-existing level: " 
              << "( " << n << ", " << l << " )" << endl;
@@ -1322,7 +1343,7 @@ double Gas_of_Atoms::dRci_dTe_BB(unsigned int i)
 
 double Gas_of_Atoms::Ric_BB(unsigned int n, unsigned int l)
 {
-    if(n==0 || n>Ric_BB_vec.size() || l>=Ric_BB_vec[n].size())
+    if(invalid_nl_index(Ric_BB_vec, n, l))
     {
         cout << " Gas_of_Atoms::Ric_BB: you are trying to access a non-existing level: " 
              << "( " << n << ", " << l << " )" << endl;
@@ -1334,7 +1355,7 @@ double Gas_of_Atoms::Ric_BB(unsigned int n, unsigned int l)
 
 double Gas_of_Atoms::Rci_BB(unsigned int n, unsigned int l) 
 {
-    if(n==0 || n>Rci_BB_vec.size() || l>=Rci_BB_vec[n].size())
+    if(invalid_nl_index(Rci_BB_vec, n, l))
     {
         cout << " Gas_of_Atoms::Rci_BB: you are trying to access a non-existing level: " 
              << "( " << n << ", " << l << " )" << endl;
@@ -1346,7 +1367,7 @@ double Gas_of_Atoms::Rci_BB(unsigned int n, unsigned int l)
 
 double Gas_of_Atoms::dRci_dTe_BB(unsigned int n, unsigned int l) 
 {
-    if(n==0 || n>dRci_dTe_BB_vec.size() || l>=dRci_dTe_BB_vec[n].size())
+    if(invalid_nl_index(dRci_dTe_BB_vec, n, l))
     {
         cout << " Gas_of_Atoms::dRci_dTe_BB: you are trying to access a non-existing level: " 
              << "( " << n << ", " << l << " )" << endl;
@@ -1429,10 +1450,17 @@ void Electron_Level::rescale_level(double alpha_scale, double me_scale) {
     this->nuion *= E_scale;
     this->Eion *= E_scale;
     this->Eion_ergs *= E_scale;
-    this->A *= Dipole_scale; // Scaling of Einstein coefficients according to CosmoSpec (2015)
-    this->AE2 *= Quad_scale;
-    this->Gamma *= Dipole_scale;
-    this->Gamma_Q_E2 *= Quad_scale;
+    // Bug fixed 06/09/2026 [JC+Codex]
+    //this->A *= Dipole_scale; // Scaling of Einstein coefficients according to CosmoSpec (2015)
+    //this->AE2 *= Quad_scale;
+    //this->Gamma *= Dipole_scale;
+    //this->Gamma_Q_E2 *= Quad_scale;
+    double AE1=this->A-this->AE2;
+    AE1*=Dipole_scale; // Scaling of Einstein coefficients according to CosmoSpec (2015)
+    this->AE2*=Quad_scale;
+    this->A=AE1+this->AE2;
+    this->Gamma=this->A/FOURPI;
+    this->Gamma_Q_E2=this->AE2/FOURPI;
     
     // Now we iterate through the Transition Data vectors and scale each of the elements
     vector<Transition_Data_A>::iterator x;

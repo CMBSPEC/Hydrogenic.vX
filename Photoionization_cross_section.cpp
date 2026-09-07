@@ -301,6 +301,7 @@ void Photoionization_cross_section_SH::g_phot_ion(double nu, vector<double> &g_p
     g_phot_l.resize(nn);
     
     nu/=energy_scale;   // treat function as before but with rescaled energy [JC, March, 2017]
+    // TODO: need to check this. Should one not just return after this set?
     if(nu<nu_ionization || nu>Photoionization_cross_section_xi_max_limit_SH*nu_ionization)
         for(int l=0; l<nn; l++) g_phot_l[l]=1.0;
     
