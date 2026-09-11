@@ -30,8 +30,9 @@ physical constants, numerical helper routines, integration routines, file I/O,
 and Voigt-profile support. Some recombination and interpolation paths also use
 external numerical libraries such as GSL.
 
-A small external demonstration project, `Hydrogenic-demo`, shows the minimal
-set of required Tools, a concrete C++ build example, and Python/Jupyter
+A small external demonstration project,
+[Hydrogenic-demo](https://github.com/CMBSPEC/Hydrogenic-demo), shows the
+minimal set of required Tools, a concrete C++ build example, and Python/Jupyter
 interfaces for interactive use.
 
 ## Related Literature And Data Sources
