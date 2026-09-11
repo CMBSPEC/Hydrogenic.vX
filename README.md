@@ -62,4 +62,4 @@ These references are listed to document the origin and scientific context of
 the methods used here; the repository itself only provides the hydrogenic atom
 setup.
 
-These repositories were made available and documented with the help of Codex. The related release work was supported in part by a grant of access to OpenAI models through the ChatGPT for Academic Researchers program.
+**Acknowledgements:** This repository was made available and documented with the help of Codex. The related release work was supported in part by a grant of access to OpenAI models through the ChatGPT for Academic Researchers program.
